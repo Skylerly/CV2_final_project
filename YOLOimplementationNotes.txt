@@ -1,0 +1,88 @@
+darknet: https://pjreddie.com/darknet/
+YOLO implementation: https://pjreddie.com/darknet/yolo/
+nonmax suppression: https://www.coursera.org/learn/convolutional-neural-networks/lecture/dvrjH/non-max-suppression
+
+Divide input image into S x S grid.
+If the center of an object falls into a grid cell, that grid cell is responsible
+for detecting that object.
+
+Each grid cell predicts B bounding boxes (for this paper it was set to B=2).
+
+Each bounding box contains 5 predictions: x, y, w, h, confidence
+    (x, y) specify the coordinates of the center of the box relative to the 
+        bounds of the cell.
+    w (width) and h (height) are predicted relative to the whole image
+        these are the with and height of the proposed bounding box.
+    confidence represents the IOU (intersection over union) between 
+        the predicted box and any ground truth box.
+
+Each grid cell predicts C conditional class probabilities 
+    conditioned on grid cell containing an object.  One set of class
+    probabilities is predicted, no matter how many boxes B.
+During testing, multiply the conditional class probabilities 
+    and individual box confidence to give class-specific confidence
+    scores for each box.  This gives the probability of that class
+    appearing in the box and how well the predicted box fits the object.
+
+OUTPUT:
+S x S x (B * 5 + C) tensor of predictions
+
+for S = 7 and B = 2 and C = 20, 
+output is 7 x 7 x 30
+
+
+NETWORK:
+24 convolutional layers followed by 2 fully connected layers
+Implements GoogLeNet but uses 1 x 1 reduction followed by 3 x 3 conv
+layers instead of Inception Layers.
+
+TRAINING:
+convolutional layers are pretrained on ImageNet 1000-class
+This was done on first 20 layers, then added an average-pooling and FC layer
+Trained for a week, achieves top-5 88% accuracy
+
+Add four convolutional layers and two fully connected layers with
+randomly initialized weights 
+Increase the input of the network from 224 x 224 to 448 x 448
+Normalize bounding box height and width so they range from 0 to 1.
+Bounding box x, y coords are offsets of one grid cell so they are normalized between
+0 and 1 also.
+Linear activation for final layer and all other layers use leaky ReLU
+
+OPTIMIZATION:
+optimize for sum-squared error
+since this weights localization error equally with classification error, which is not 
+ideal, the paper proposes a remedy.
+increase the loss from bounding box coordinate predictions and decrease the loss from
+confidence predictions for boxes that don't contain objects.
+YOLO predicts the sqrt() of the bounding box coords because errors in large boxes of
+the same size of error in small boxes has proportionately smaller significance.
+During training, assign one predictor to be responsible for predicting an object based
+which prediction has the highest current IOU with ground truth.
+
+TRAINING:
+We train the network for about 135 epochs on the train-
+ing and validation data sets from P ASCAL VOC 2007 and
+2012. When testing on 2012 we also include the VOC 2007
+test data for training. Throughout training we use a batch
+size of 64, a momentum of 0.9 and a decay of 0.0005.
+
+Our learning rate schedule is as follows: For the first
+epochs we slowly raise the learning rate from 10 −3 to 10 −2 .
+If we start at a high learning rate our model often diverges
+due to unstable gradients. We continue training with 10 −2
+for 75 epochs, then 10 −3 for 30 epochs, and finally 10 −4
+for 30 epochs.
+
+To avoid overfitting we use dropout and extensive data
+augmentation. A dropout layer with rate = .5 after the first
+connected layer prevents co-adaptation between layers [18].
+For data augmentation we introduce random scaling and
+translations of up to 20% of the original image size. We
+also randomly adjust the exposure and saturation of the im-
+age by up to a factor of 1.5 in the HSV color space.
+
+TESTING:
+Apply non-max suppression to get better performance
+(get rid of high IOU predictions with less confidence).
+

@@ -71,3 +71,4 @@ class DataGenerator(keras.utils.Sequence):
             y[i,] = np.load(LABELS_DIR + list_labels_temp[i])
 
         return X, y
+-

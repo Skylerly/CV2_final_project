@@ -10,8 +10,9 @@ from keras import backend as K
 import keras
 
 def drawRectsFromPred(predictions, img):
-    for i in range(7):
-        for j in range(7):
+    S = 7
+    for i in range(S):
+        for j in range(S):
             print(predictions[i,j,0])
             #consider areas where we get a >0.3 confidence that there is an object
             if predictions[i,j,0] > 0.3:
@@ -26,6 +27,10 @@ def customloss(gt, pred):
     """ Custom loss function to apply categorical cross entropy to the classification
     results and L2 loss to confidence and box coordinates"""
     #assert gt.shape == pred.shape
+
+    S = 7
+    B = 1
+    C_LEN = 20
     
     loss = K.variable(0.,dtype='float32')
     print(gt.shape)
@@ -34,13 +39,40 @@ def customloss(gt, pred):
         batch_size = int(gt.shape[0])
     except:
         batch_size = 32
+
+    # set some parameters
+    lam_coord = 5.0
+    lab_noobj = 0.5
+
+    # loss from bouding box locations
+    loss_bbloc = 0
+    loss += loss_bbloc
+
+    # loss from boudning box sizes
+    loss_bbsize = 0
+    loss += loss_bbsize
+
+    # loss from bounding box predictor responsible
+    # for prediction
+    loss_bbpred = 0
+    loss += loss__bbpred
+
+    # loss from boudning box predictor that is
+    # not responsible for prediction
+    loss_bbnopred = 0
+    loss += loss_bbnopred
+
+    # loss from probabilities for cells where the given
+    # object appears
+    loss_prob = 0
+    loss += loss_prob
         
-    for batch in range(batch_size):
-        for i in range(7):
-            for j in range(7):
-                # Catgeorical crossentropy for classwise confidence
-                loss = K.add(loss , K.sum(K.categorical_crossentropy(gt[batch,i,j,5:], pred[batch,i,j,5:])))
-                # MSE for confidence and bounding box predictions
-                loss = K.add(loss , K.mean(K.square(gt[i,j,:5] - pred[i,j,:5])))
+    # for batch in range(batch_size):
+    #     for i in range(7):
+    #         for j in range(7):
+    #             # Catgeorical crossentropy for classwise confidence
+    #             loss = K.add(loss , K.sum(K.categorical_crossentropy(gt[batch,i,j,5:], pred[batch,i,j,5:])))
+    #             # MSE for confidence and bounding box predictions
+    #             loss = K.add(loss , K.mean(K.square(gt[i,j,:5] - pred[i,j,:5])))
             
-    return loss / (batch_size * 25 * 25)
+    return loss / (batch_size * (C_LEN + 5*B) * (C_LEN + 5*B))
