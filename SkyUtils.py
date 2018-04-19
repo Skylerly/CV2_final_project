@@ -27,6 +27,8 @@ def customloss(gt, pred):
     """ Custom loss function to apply categorical cross entropy to the classification
     results and L2 loss to confidence and box coordinates"""
     #assert gt.shape == pred.shape
+    # gt stands for ground truth
+    # pred is the predicted values
 
     S = 7
     B = 1
@@ -55,7 +57,7 @@ def customloss(gt, pred):
     # loss from bounding box predictor responsible
     # for prediction
     loss_bbpred = 0
-    loss += loss__bbpred
+    loss += loss_bbpred
 
     # loss from boudning box predictor that is
     # not responsible for prediction

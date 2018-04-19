@@ -55,8 +55,9 @@ class DataGenerator(keras.utils.Sequence):
         y = np.empty([self.batch_size, 7,7,25])
 
         # Generate data
-        IMG_DIR = 'D:/VOCtrainval_11-May-2012/VOCdevkit/VOC2012/JPEGImages/'
-        LABELS_DIR = 'D:/VOC_individual_np/labels/'
+        BASE_DIR = "M:/Documents/Courses/CSE586/finalProject/CV2_final_project"
+        IMG_DIR = os.path.join(BASE_DIR, "data/VOCdevkit/VOC2012/JPEGImages/")
+        LABELS_DIR = os.path.join(BASE_DIR, "data/preprocessing/labels/")
         avg_colors = (124.59085262283071, 124.91715538568295, 124.90344722141644) # precomputed on the training set in bgr order
         for i, ID in enumerate(list_IDs_temp):
             # Store sample
@@ -71,4 +72,3 @@ class DataGenerator(keras.utils.Sequence):
             y[i,] = np.load(LABELS_DIR + list_labels_temp[i])
 
         return X, y
--
