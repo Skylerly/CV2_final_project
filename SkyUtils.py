@@ -30,6 +30,9 @@ def customloss(gt, pred):
     # gt stands for ground truth
     # pred is the predicted values
 
+    print("ground truth shape: {}".format(gt))
+    print("pred shape: {}".format(pred))
+
     S = 7
     B = 1
     C_LEN = 20
@@ -40,7 +43,7 @@ def customloss(gt, pred):
     try: 
         batch_size = int(gt.shape[0])
     except:
-        batch_size = 32
+        batch_size = 4
 
     # set some parameters
     lam_coord = 5.0
@@ -68,6 +71,10 @@ def customloss(gt, pred):
     # object appears
     loss_prob = 0
     loss += loss_prob
+
+    # something like:
+    #     conf_mask = (prediction[:,:,4] > confidence).float().unsqueeze(2)
+    # prediction = prediction*conf_mask
         
     # for batch in range(batch_size):
     #     for i in range(7):
@@ -77,4 +84,5 @@ def customloss(gt, pred):
     #             # MSE for confidence and bounding box predictions
     #             loss = K.add(loss , K.mean(K.square(gt[i,j,:5] - pred[i,j,:5])))
             
-    return loss / (batch_size * (C_LEN + 5*B) * (C_LEN + 5*B))
+    #return loss / (batch_size * (C_LEN + 5*B) * (C_LEN + 5*B))
+    return K.square(-pred - gt)

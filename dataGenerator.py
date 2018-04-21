@@ -10,10 +10,11 @@ NOTE: Original code taken from https://stanford.edu/~shervine/blog/keras-how-to-
 import numpy as np
 import keras
 import cv2
+import os
 
 class DataGenerator(keras.utils.Sequence):
     'Generates data for Keras'
-    def __init__(self, list_IDs, labels, batch_size=32, dim=(224,224,3),
+    def __init__(self, list_IDs, labels, batch_size=4, dim=(224,224,3),
                  n_classes=10, shuffle=True, ):
         'Initialization'
         self.dim = dim
@@ -49,20 +50,24 @@ class DataGenerator(keras.utils.Sequence):
             np.random.shuffle(self.indexes)
 
     def __data_generation(self, list_IDs_temp,list_labels_temp):
+        B = 1
+        S = 7
+        C_LEN = 20
+        IMG_SIZE = (224, 224)
         'Generates data containing batch_size samples' # X : (n_samples, *dim, n_channels)
         # Initialization
         X = np.empty([self.batch_size,self.dim[0],self.dim[1],self.dim[2]])
-        y = np.empty([self.batch_size, 7,7,25])
+        y = np.empty([self.batch_size, S, S, (5*B+C_LEN)])
 
         # Generate data
         BASE_DIR = "M:/Documents/Courses/CSE586/finalProject/CV2_final_project"
         IMG_DIR = os.path.join(BASE_DIR, "data/VOCdevkit/VOC2012/JPEGImages/")
-        LABELS_DIR = os.path.join(BASE_DIR, "data/preprocessing/labels/")
+        LABELS_DIR = os.path.join(BASE_DIR, "data/preprocessed/labels/")
         avg_colors = (124.59085262283071, 124.91715538568295, 124.90344722141644) # precomputed on the training set in bgr order
         for i, ID in enumerate(list_IDs_temp):
             # Store sample
             img = cv2.imread(IMG_DIR + ID)
-            img = cv2.resize(img, (224,224))
+            img = cv2.resize(img, IMG_SIZE)
             img = img - avg_colors
             #X[i,] = np.load('D:/VOC_individual_np/images/' + ID)
             X[i,] = img
@@ -70,5 +75,8 @@ class DataGenerator(keras.utils.Sequence):
             # Store class
             #TODO: modify this to transform our training labels too
             y[i,] = np.load(LABELS_DIR + list_labels_temp[i])
+        
+        print("X: {}".format(X.shape))
+        print("y: {}".format(y.shape))
 
         return X, y
