@@ -76,7 +76,7 @@ class DataGenerator(keras.utils.Sequence):
             #TODO: modify this to transform our training labels too
             y[i,] = np.load(LABELS_DIR + list_labels_temp[i])
         
-        print("X: {}".format(X.shape))
-        print("y: {}".format(y.shape))
+        # print("X: {}".format(X.shape))
+        # print("y: {}".format(y.shape))
 
         return X, y

@@ -44,63 +44,66 @@ labels = {
 num_images = len(os.listdir())
 training_y = np.empty([num_images, S, S, C_LEN+(5*B)])
 rects = []
-# for count, fname in enumerate(os.listdir()):
-#     target = np.zeros([S,S,C_LEN+(5*B)])
-#     tree = etree.parse(fname)
-#     root = tree.getroot()
-#     size = root.find('size')
-#     # Get height and width so we can scale appropriately
-#     w = int(size.find('width').text)
-#     h = int(size.find('height').text)
-#     #obj = root.find('object')
-#     divfac = len(root.findall('object'))
-#     for obj in root.findall('object'):
-#         name = obj.find('name').text
-#         bb = obj.find('bndbox')
-#         xmin = float(bb.find('xmin').text)
-#         xmax = float(bb.find('xmax').text)
-#         ymin = float(bb.find('ymin').text)
-#         ymax = float(bb.find('ymax').text)
+for count, fname in enumerate(os.listdir()):
+    target = np.zeros([S,S,C_LEN+(5*B)])
+    tree = etree.parse(fname)
+    root = tree.getroot()
+    size = root.find('size')
+    # Get height and width so we can scale appropriately
+    w = int(size.find('width').text)
+    h = int(size.find('height').text)
+    #obj = root.find('object')
+    divfac = len(root.findall('object'))
+    for obj in root.findall('object'):
+        name = obj.find('name').text
+        bb = obj.find('bndbox')
+        xmin = float(bb.find('xmin').text)
+        xmax = float(bb.find('xmax').text)
+        ymin = float(bb.find('ymin').text)
+        ymax = float(bb.find('ymax').text)
         
+        # prediction output: (confidence, x, w, y, h, probs)
 
-#         # high confidence in all boxes object touches - smoothed for specific category
-#         for i in range(int(xmin / (w / S)),int(xmax / (w / S))+1):
-#             for j in range(int(ymin / (h / S)),int(ymax / (h / S)) +1):
-#                 try:
-#                     target[j,i,0] = 1 #general conf
-#                     target[j,i,4 + labels[name]] = 1 / max(divfac,3) # category conf
+        # high confidence in all boxes object touches - smoothed for specific category
+        for i in range(int(xmin / (w / S)),int(xmax / (w / S))+1):
+            for j in range(int(ymin / (h / S)),int(ymax / (h / S)) +1):
+                try:
+                    target[j,i,0] = 1 #general conf
+                    target[j,i,4 + labels[name]] = 1 / max(divfac,3) # category conf
 
-#                     # scale coords to new img
-#                     target[j,i,1] = xmin * IMG_SIZE[0] / w  # x
-#                     target[j,i,2] = (xmax - xmin) * IMG_SIZE[0] / w  # width
-#                     target[j,i,3] = ymin * IMG_SIZE[1] / h  # y
-#                     target[j,i,4] = (ymax - ymin) * IMG_SIZE[1] / h # height
-#                     rects.append([target[j,i,1], target[j,i,3], target[j,i,2], target[j,i,4]])
-#                 except:
-#                     pass
-#         # insert positive label for confidence at center
-#         centerx = int(0.5 * (xmin + xmax)/ (w / S) ) 
-#         centery = int(0.5 * (ymin + ymax)/ (h / S) ) 
-#         target[centery, centerx, 4 + labels[name]] = 1
-#         target[centery,centerx,0] = 1 #general conf
+                    # scale coords to new img
+                    target[j,i,1] = xmin * IMG_SIZE[0] / w  # x
+                    target[j,i,2] = (xmax - xmin) * IMG_SIZE[0] / w  # width
+                    target[j,i,3] = ymin * IMG_SIZE[1] / h  # y
+                    target[j,i,4] = (ymax - ymin) * IMG_SIZE[1] / h # height
+                    rects.append([target[j,i,1], target[j,i,3], target[j,i,2], target[j,i,4]])
+                except:
+                    pass
+        # insert positive label for confidence at center
+        centerx = int(0.5 * (xmin + xmax)/ (w / S) )
+        centery = int(0.5 * (ymin + ymax)/ (h / S) )
+        target[centery, centerx, 4 + labels[name]] = 1
+
+        # WHAT IS THE POINT OF THIS?? ISN'T IT DONE BEFORE??
+        target[centery,centerx,0] = 1 #general conf
         
-#         # insert it into the training array
-#         #training_y[i,:,:,:] = target
-#         # Save as individual numpy array for data generator
-#     np.save(os.path.join(BASE_DIR, "data/preprocessed/labels/{}.npy".format(count)), target)
+        # insert it into the training array
+        #training_y[i,:,:,:] = target
+        # Save as individual numpy array for data generator
+    np.save(os.path.join(BASE_DIR, "data/preprocessed/labels/{}.npy".format(count)), target)
   
-# Gathering images
-# IMG_DIR = os.path.join(BASE_DIR, "data/VOCdevkit/VOC2012/JPEGImages")
-# num_images = len(os.listdir())
-# #train_x = np.empty([int(num_images/4), IMG_SIZE[0], IMG_SIZE[1], 3])
-# os.chdir(IMG_DIR)
-# avg_colors = (124.59085262283071, 124.91715538568295, 124.90344722141644) # precomputed on the training set in bgr order
-# count = 0
-# for i, img in enumerate(os.listdir()):
-#     img = cv2.imread(img)
-#     img = cv2.resize(img, IMG_SIZE)
-#     img = img - avg_colors
-#     np.save(os.path.join(BASE_DIR, "data/preprocessed/images/{}.npy".format(i), img))
+Gathering images
+IMG_DIR = os.path.join(BASE_DIR, "data/VOCdevkit/VOC2012/JPEGImages")
+num_images = len(os.listdir())
+#train_x = np.empty([int(num_images/4), IMG_SIZE[0], IMG_SIZE[1], 3])
+os.chdir(IMG_DIR)
+avg_colors = (124.59085262283071, 124.91715538568295, 124.90344722141644) # precomputed on the training set in bgr order
+count = 0
+for i, img in enumerate(os.listdir()):
+    img = cv2.imread(img)
+    img = cv2.resize(img, IMG_SIZE)
+    img = img - avg_colors
+    np.save(os.path.join(BASE_DIR, "data/preprocessed/images/{}.npy".format(i), img))
 
 
 # DISPLAY PURPOSES

@@ -66,6 +66,9 @@ classes = Reshape((S,S,C_LEN))(classes)
 # concatenate the layers for the output
 out = concatenate([conf,bb,classes],axis=3)
 
+# prediction output: (confidence, x, w, y, h, probs)
+
+
 print("creating model ...")
 model = Model(inputs=input, outputs=out)
 # compile model or whatever

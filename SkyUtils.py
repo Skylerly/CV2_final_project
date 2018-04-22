@@ -8,6 +8,7 @@ import cv2
 import numpy as np
 from keras import backend as K
 import keras
+from keras import losses
 
 def drawRectsFromPred(predictions, img):
     S = 7
@@ -38,39 +39,61 @@ def customloss(gt, pred):
     C_LEN = 20
     
     loss = K.variable(0.,dtype='float32')
-    print(gt.shape)
-    print(pred.shape)
+    # print("Ground Truth shape: {}".format(gt.shape))
+    # print("Pred shape: {}".format(pred.shape))
     try: 
         batch_size = int(gt.shape[0])
     except:
         batch_size = 4
+
+    # prediction output: (confidence, x, w, y, h, probs)
 
     # set some parameters
     lam_coord = 5.0
     lab_noobj = 0.5
 
     # loss from bouding box locations
-    loss_bbloc = 0
-    loss += loss_bbloc
+    # FIND THE ACTUAL MASK
+    loss_bbloc_mask = K.zeros(shape=(batch_size, S, S))
+    x_pred, y_pred = (pred[:, :, :, 1], pred[:, :, :, 3])
+    x_gt, y_gt = (gt[:, :, :, 1], gt[:, :, :, 3])
+    loss_bbloc = loss_bbloc_mask * (K.square(x_pred-x_gt) + K.square(y_pred-y_gt))
+    loss.assign_add(K.sum(K.reshape(loss_bbloc, shape=(-1, 1))))
 
     # loss from boudning box sizes
-    loss_bbsize = 0
-    loss += loss_bbsize
+    # FIND THE ACTUAL MASK
+    loss_bbsize_mask = K.zeros(shape=(batch_size, S, S))
+    w_pred, h_pred = (pred[:, :, :, 2], pred[:, :, :, 4])
+    w_gt, h_gt = (gt[:, :, :, 2], gt[:, :, :, 4])
+    w_pred = K.sqrt(w_pred)
+    w_gt = K.sqrt(w_gt)
+    h_pred = K.sqrt(h_pred)
+    h_gt = K.sqrt(h_gt)
+    loss_bbsize = loss_bbsize_mask * (K.square(w_pred-w_gt) + K.square(h_pred-h_gt))
+    loss.assign_add(K.sum(K.reshape(loss_bbsize, shape=(-1,1))))
 
     # loss from bounding box predictor responsible
     # for prediction
-    loss_bbpred = 0
-    loss += loss_bbpred
+    # FIND THE ACTUAL MASK
+    loss_bbpred_mask = K.zeros(shape=(batch_size, S, S))
+    loss_bbpred = loss_bbpred_mask
+    loss.assign_add(K.sum(K.reshape(loss_bbpred, shape=(-1,1))))
 
     # loss from boudning box predictor that is
     # not responsible for prediction
-    loss_bbnopred = 0
-    loss += loss_bbnopred
+    # FIND THE ACTUAL MASK
+    loss_bbnopred_mask = K.ones(shape=(batch_size, S, S)) - loss_bbpred_mask
+    loss_bbnopred = loss_bbnopred_mask 
+    loss.assign_add(K.sum(K.reshape(loss_bbnopred, shape=(-1, 1))))
 
     # loss from probabilities for cells where the given
     # object appears
-    loss_prob = 0
-    loss += loss_prob
+    # FIND THE ACTUAL MASK
+    loss_prob_mask = K.ones(shape=(batch_size, S, S))
+    probs_pred = pred[:, :, :, 5:]
+    probs_gt = gt[:, :, :, 5:]
+    loss_prob = loss_prob_mask * losses.categorical_crossentropy(probs_gt, probs_pred)
+    loss.assign_add(K.sum(K.reshape(loss_prob, shape=(-1,1))))
 
     # something like:
     #     conf_mask = (prediction[:,:,4] > confidence).float().unsqueeze(2)
@@ -85,4 +108,6 @@ def customloss(gt, pred):
     #             loss = K.add(loss , K.mean(K.square(gt[i,j,:5] - pred[i,j,:5])))
             
     #return loss / (batch_size * (C_LEN + 5*B) * (C_LEN + 5*B))
-    return K.square(-pred - gt)
+    # loss = K.square(pred - gt)
+    # print("Loss: {}".format(loss))
+    return loss
