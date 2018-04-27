@@ -52,11 +52,11 @@ class DataGenerator(keras.utils.Sequence):
         'Generates data containing batch_size samples' # X : (n_samples, *dim, n_channels)
         # Initialization
         X = np.empty([self.batch_size,self.dim[0],self.dim[1],self.dim[2]])
-        y = np.empty([self.batch_size, 7,7,25])
+        y = np.empty([self.batch_size, 4*4*25])
 
         # Generate data
         IMG_DIR = 'D:/VOCtrainval_11-May-2012/VOCdevkit/VOC2012/JPEGImages/'
-        LABELS_DIR = 'D:/VOC_individual_np/labels/'
+        LABELS_DIR = 'D:/sadVOC_individual_np/labels/'
         avg_colors = (124.59085262283071, 124.91715538568295, 124.90344722141644) # precomputed on the training set in bgr order
         for i, ID in enumerate(list_IDs_temp):
             # Store sample
@@ -68,6 +68,9 @@ class DataGenerator(keras.utils.Sequence):
 
             # Store class
             #TODO: modify this to transform our training labels too
-            y[i,] = np.load(LABELS_DIR + list_labels_temp[i])
+            _y = np.load(LABELS_DIR + list_labels_temp[i])
+            y[i,] = np.reshape(_y,(1,4*4*25))
+            #y[i,] = np.load(LABELS_DIR + list_labels_temp[i])
+            
 
         return X, y
