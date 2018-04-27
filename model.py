@@ -10,6 +10,7 @@ import cv2
 import os
 import dataGenerator
 import SkyUtils
+import yololoss_implementation1
 import keras
 from keras import backend as K
 from keras.preprocessing.image import ImageDataGenerator
@@ -65,6 +66,7 @@ classes = Dense(S*S*C_LEN, activation='softmax')(x)
 classes = Reshape((S,S,C_LEN))(classes)
 # concatenate the layers for the output
 out = concatenate([conf,bb,classes],axis=3)
+print(out)
 
 # prediction output: (confidence, x, w, y, h, probs)
 

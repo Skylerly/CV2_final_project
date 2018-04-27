@@ -37,8 +37,19 @@ def customloss(gt, pred):
     S = 7
     B = 1
     C_LEN = 20
+    CONFIDENCE_THRESH = 0.5
+
+    # reshape the input to make it easier to calculate loss
+    # MAKE SURE THAT THESE ARE ACCURATE
+    y_true = K.reshape(gt, shape=[-1, B*5+C_LEN])
+    y_pred = K.reshape(pred, shape=[-1, B*5+C_LEN])
+    print(K.eval(y_true))
+    print(K.eval(y_pred))
+
+    #t = K.greater(truth_confid_tf, 0.5) 
+    confidence_mask = K.tf.where(y_true > CONFIDENCE_THRESH)
     
-    loss = K.variable(0.,dtype='float32')
+    #loss = K.variable(0.,dtype='float32')
     # print("Ground Truth shape: {}".format(gt.shape))
     # print("Pred shape: {}".format(pred.shape))
     try: 
@@ -89,6 +100,7 @@ def customloss(gt, pred):
     # loss from probabilities for cells where the given
     # object appears
     # FIND THE ACTUAL MASK
+    # NEED TO ADD A SIGMOID
     loss_prob_mask = K.ones(shape=(batch_size, S, S))
     probs_pred = pred[:, :, :, 5:]
     probs_gt = gt[:, :, :, 5:]
