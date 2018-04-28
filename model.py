@@ -18,6 +18,7 @@ from keras.applications import VGG16
 from keras.datasets import cifar100
 from keras.layers import Input, Convolution2D, MaxPooling2D, Dense, Dropout, Flatten, BatchNormalization, Activation, Reshape, concatenate
 from keras.models import Sequential, Model
+from keras import optimizers
 from keras.utils import np_utils
 
 image_IDs = os.listdir('D:/VOC_individual_np/images')
@@ -29,16 +30,11 @@ for layer in conv_base.layers:
     
 # BB regression
 input = Input(shape=(224,224,3))
-conv_base = VGG16(weights='imagenet',include_top=False, input_shape=(224, 224, 3))(input)
+conv_base = conv_base(input)
+#conv_base = VGG16(weights='imagenet',include_top=False, input_shape=(224, 224, 3))(input)
 x = Flatten()(conv_base)
-x = Dense(4096, activation='relu')(x)
-conf = Dense(7*7*1, activation='sigmoid')(x)
-conf = Reshape((7,7,1))(conf)
-bb = Dense(7*7*4)(x)
-bb = Reshape((7,7,4))(bb)
-classes = Dense(7*7*20, activation='softmax')(x)
-classes = Reshape((7,7,20))(classes)
-out = concatenate([conf,bb,classes],axis=3)
+x = Dense(256, activation='relu')(x)
+out = Dense(21)(x)
 
 model = Model(inputs=input, outputs=out)
 
@@ -54,7 +50,8 @@ model = Model(inputs=input, outputs=out)
 
 
 
-model.compile(loss='mse', optimizer='adam', metrics=['accuracy'])
+adam = optimizers.adam(lr=0.0001, beta_1=0.9, beta_2=0.999)
+model.compile(loss=SkyUtils.custom_loss_2, optimizer=adam, metrics=[SkyUtils.custom_accuracy_1, SkyUtils.custom_accuracy_2])
 
 training_generator = dataGenerator.DataGenerator(image_IDs, labels)
 

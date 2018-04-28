@@ -10,6 +10,7 @@ from keras import backend as K
 import keras
 import tensorflow as tf
 import random
+from keras import losses, metrics
 
 def drawRectsFromPred(predictions, img):
     for i in range(7):
@@ -40,6 +41,32 @@ def overlayPredsByColor(predictions,img):
     output = cv2.addWeighted(colormap, alpha, output, 1 - alpha, 0, output)
     return output
     
+
+
+def custom_loss_2(gt, pred):
+
+    # loss from total number of objects
+    num_objects_loss_scalar = 5.0
+    num_objects_loss = losses.mean_squared_error(gt[:, 0], pred[:, 0])
+
+    # figure out how to predict loss for the categorical part
+    # do I need to convert it to binary and one class
+    # to use categorical cross entropy?
+    categorical_loss_scalar = 1.0
+    categorical_loss = losses.categorical_crossentropy(gt[:, 1:], pred[:, 1:])
+
+    total_loss = num_objects_loss_scalar * num_objects_loss + \
+        categorical_loss_scalar  * categorical_loss
+
+    return total_loss
+
+def custom_accuracy_2(gt, pred):
+    return metrics.categorical_accuracy(gt[:, 1:], pred[:, 1:])
+
+def custom_accuracy_1(gt, pred):
+    # acc = K.sum(K.flatten(K.square(gt[:, 0] - pred[:, 0])))
+    return metrics.mean_squared_error(gt[:, 0], pred[:, 0])
+
 
 def customloss(gt, pred):
     """ Custom loss function to apply categorical cross entropy to the classification
