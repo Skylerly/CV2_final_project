@@ -24,11 +24,13 @@ from keras import optimizers
 import tqdm
 
 BASE_DIR = "M:/Documents/Courses/CSE586/finalProject/CV2_final_project"
+IMG_DIR = os.path.join(BASE_DIR, "data/VOCdevkit/VOC2012/JPEGImages/")
+LABEL_DIR = os.path.join(BASE_DIR, "data/preprocessed_2/labels")
+prediction_indices = [0, 1, 2, 3, 4, 5, 6, 7]
 N_LEN = 1
 C_LEN = 20
 IMG_SIZE = (224, 224, 3)
-# HIDDEN_SIZE = 4096
-HIDDEN_SIZE = 128
+HIDDEN_SIZE = 256
 MULTIPROCESSING = False
 PARALLEL = 1
 BATCH_SIZE = 16
@@ -37,9 +39,8 @@ BATCH_SIZE = 16
 os.chdir(BASE_DIR)
 
 print("loading images and labels and conv net ...")
-image_IDs = os.listdir(os.path.join(BASE_DIR, "data/preprocessed/images"))
-image_IDs = os.listdir(os.path.join(BASE_DIR, "data/VOCdevkit/VOC2012/JPEGImages/"))
-labels = os.listdir(os.path.join(BASE_DIR, "data/preprocessed_2/labels"))
+image_IDs = os.listdir(IMG_DIR)
+labels = os.listdir(LABEL_DIR)
 conv_base = VGG16(weights='imagenet',include_top=False, input_shape=IMG_SIZE)
 
 # set weights to not trainable
@@ -56,17 +57,22 @@ x = Flatten()(base)
 # apply 4096 hidden layer
 x = Dense(HIDDEN_SIZE, activation='relu')(x)
 # get confidence scores and reshape
-out = Dense(N_LEN + C_LEN, activation='softmax')(x)
+num_images = Dense(N_LEN)(x)
+class_probs = Dense(C_LEN, activation="softmax")(x)
+out = concatenate([num_images, class_probs],axis=1)
 print(out)
 
 print("creating model ...")
 model = Model(inputs=input, outputs=out)
 # compile model or whatever
 adam = optimizers.adam(lr=0.0001, beta_1=0.9, beta_2=0.999)
-model.compile(loss=SkyUtils.custom_loss_2, optimizer=adam, metrics=[SkyUtils.custom_accuracy_1, SkyUtils.custom_accuracy_2])
+model.compile(loss=SkyUtils.custom_loss_2, optimizer=adam, metrics=[SkyUtils.custom_accuracy_num, SkyUtils.custom_accuracy_cat])
 # create the data generator to use
 training_generator = dataGenerator_new.DataGenerator_new(image_IDs, labels, batch_size=BATCH_SIZE,
     dim=IMG_SIZE, n_classes=C_LEN, shuffle=True)
+
+# make predictions on the test data
+SkyUtils.makePredictions(model=model, image_dir=IMG_DIR, label_dir=LABEL_DIR, indices=prediction_indices)
 
 print("training ...")
 epochs = 10
@@ -82,17 +88,20 @@ for i in range(epochs):
     # loss.append(history.history['loss'])
     # print("epoch {} / {}, loss: {}".format(i, epochs, loss[-1]))
     # print("saving model ...")
-    model.save(os.path.join(BASE_DIR, "modelS/first_model_{}.h5".format(i)))
+    model.save(os.path.join(BASE_DIR, "models/first_model_{}.h5".format(i)))
     model.save_weights(os.path.join(BASE_DIR, "models/first_model_weights_{}.h5".format(i)))
 
-# testing out some predictions
-print("testing ...")
-img = np.load(os.path.join(BASE_DIR, "data/preprocessed/images/1.npy"))
-gt = np.load(os.path.join(BASE_DIR, "data/preprocessed_2/labels/1.npy"))
-cv2.imshow('img',img);cv2.waitKey()
+    # make predictions on the test data
+    SkyUtils.makePredictions(model=model, image_dir=IMG_DIR, label_dir=LABEL_DIR, indices=prediction_indices)
 
-prediction = model.predict(np.expand_dims(img, axis=0))
-print(prediction)
+# testing out some predictions
+# print("testing ...")
+# img = np.load(os.path.join(BASE_DIR, "data/preprocessed/images/1.npy"))
+# gt = np.load(os.path.join(BASE_DIR, "data/preprocessed_2/labels/1.npy"))
+# cv2.imshow('img',img);cv2.waitKey()
+
+# prediction = model.predict(np.expand_dims(img, axis=0))
+# print(prediction)
 #canvas = cv2.imread(os.path.join(BASE_DIR, "data/VOCdevkit/VOC2012/JPEGImages/2007_000032.jpg"))
 #canvas = cv2.resize(canvas, (IMG_SIZE[0], IMG_SIZE[1]))
 #output = SkyUtils.drawRectsFromPred(prediction[0],canvas)

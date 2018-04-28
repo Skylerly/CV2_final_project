@@ -9,6 +9,36 @@ import numpy as np
 from keras import backend as K
 import keras
 from keras import losses, metrics
+import os
+
+def makePredictions(model, image_dir, label_dir, indices):
+    # constants
+    N_LEN = 1
+    C_LEN = 20
+    IMG_SIZE = (224, 224, 3)
+    # precomputed on the training set in bgr order
+    avg_colors = (124.59085262283071, 124.91715538568295, 124.90344722141644)
+
+    # get list of all images and labels
+    images = os.listdir(image_dir)
+    labels = os.listdir(label_dir)
+
+    # loop over samples to predict
+    for idx in indices:
+        # load data
+        img = cv2.imread(os.path.join(image_dir, images[idx]))
+        img = cv2.resize(img, IMG_SIZE[0:2])
+        img = img - avg_colors
+        target = np.load(os.path.join(label_dir, labels[idx]))
+
+        # make prediction
+        img = np.expand_dims(img, axis=0)
+        pred = model.predict(img)
+        
+        # output results
+        print("---------------------- Image: {} ({}) ----------------------".format(idx, images[idx]))
+        print("Target: {}".format(target))
+        print("Prediction: {}".format(pred))
 
 def drawRectsFromPred(predictions, img):
     S = 7
@@ -35,16 +65,16 @@ def custom_loss_2(gt, pred):
     categorical_loss_scalar = 1.0
     categorical_loss = losses.categorical_crossentropy(gt[:, 1:], pred[:, 1:])
 
-    total_loss = num_objects_loss_scalar * num_objects_loss + \
-        categorical_loss_scalar  * categorical_loss
+    # total_loss = num_objects_loss_scalar * num_objects_loss + \
+    #     categorical_loss_scalar  * categorical_loss
+    total_loss = num_objects_loss
 
     return total_loss
 
-def custom_accuracy_2(gt, pred):
+def custom_accuracy_cat(gt, pred):
     return metrics.categorical_accuracy(gt[:, 1:], pred[:, 1:])
 
-def custom_accuracy_1(gt, pred):
-    # acc = K.sum(K.flatten(K.square(gt[:, 0] - pred[:, 0])))
+def custom_accuracy_num(gt, pred):
     return metrics.mean_squared_error(gt[:, 0], pred[:, 0])
 
 def customloss(gt, pred):

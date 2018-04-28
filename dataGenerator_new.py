@@ -71,8 +71,5 @@ class DataGenerator_new(keras.utils.Sequence):
 
             # Store class
             y[i,] = np.load(LABELS_DIR + list_labels_temp[i])
-        
-        # print("X: {}".format(X.shape))
-        # print("y: {}".format(y.shape))
-
+            
         return X, y
