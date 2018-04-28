@@ -8,7 +8,7 @@ import cv2
 import numpy as np
 from keras import backend as K
 import keras
-from keras import losses
+from keras import losses, metrics
 
 def drawRectsFromPred(predictions, img):
     S = 7
@@ -23,6 +23,29 @@ def drawRectsFromPred(predictions, img):
                 cv2.rectangle(img, (x,y),(x+w,y+h), (0,255,0), 1)
     return img
 
+def custom_loss_2(gt, pred):
+
+    # loss from total number of objects
+    num_objects_loss_scalar = 5.0
+    num_objects_loss = losses.mean_squared_error(gt[:, 0], pred[:, 0])
+
+    # figure out how to predict loss for the categorical part
+    # do I need to convert it to binary and one class
+    # to use categorical cross entropy?
+    categorical_loss_scalar = 1.0
+    categorical_loss = losses.categorical_crossentropy(gt[:, 1:], pred[:, 1:])
+
+    total_loss = num_objects_loss_scalar * num_objects_loss + \
+        categorical_loss_scalar  * categorical_loss
+
+    return total_loss
+
+def custom_accuracy_2(gt, pred):
+    return metrics.categorical_accuracy(gt[:, 1:], pred[:, 1:])
+
+def custom_accuracy_1(gt, pred):
+    # acc = K.sum(K.flatten(K.square(gt[:, 0] - pred[:, 0])))
+    return metrics.mean_squared_error(gt[:, 0], pred[:, 0])
 
 def customloss(gt, pred):
     """ Custom loss function to apply categorical cross entropy to the classification
