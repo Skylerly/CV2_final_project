@@ -15,12 +15,14 @@ import os
 class DataGenerator_new(keras.utils.Sequence):
     'Generates data for Keras'
     def __init__(self, list_IDs, labels, batch_size=4, dim=(224,224,3),
-                 n_classes=20, shuffle=True, ):
+                 n_classes=20, shuffle=True, img_dir="", label_dir=""):
         'Initialization'
         self.dim = dim
         self.batch_size = batch_size
         self.labels = labels
         self.list_IDs = list_IDs
+        self.img_dir = img_dir
+        self.label_dir = label_dir
         
         self.n_classes = n_classes
         self.shuffle = shuffle
@@ -49,7 +51,7 @@ class DataGenerator_new(keras.utils.Sequence):
         if self.shuffle == True:
             np.random.shuffle(self.indexes)
 
-    def __data_generation(self, list_IDs_temp,list_labels_temp):
+    def __data_generation(self, list_IDs_temp, list_labels_temp):
         N_LEN = 1
         C_LEN = 20
         'Generates data containing batch_size samples' # X : (n_samples, *dim, n_channels)
@@ -59,17 +61,19 @@ class DataGenerator_new(keras.utils.Sequence):
 
         # Generate data
         BASE_DIR = "M:/Documents/Courses/CSE586/finalProject/CV2_final_project"
-        IMG_DIR = os.path.join(BASE_DIR, "data/VOCdevkit/VOC2012/JPEGImages/")
-        LABELS_DIR = os.path.join(BASE_DIR, "data/preprocessed_2/labels/")
+        IMG_DIR = self.img_dir
+        LABEL_DIR = self.label_dir
         avg_colors = (124.59085262283071, 124.91715538568295, 124.90344722141644) # precomputed on the training set in bgr order
         for i, ID in enumerate(list_IDs_temp):
-            # Store sample
-            img = cv2.imread(IMG_DIR + ID)
+            image_path = os.path.join(IMG_DIR, ID)
+            label_path = os.path.join(LABEL_DIR, list_labels_temp[i])
+
+            img = cv2.imread(image_path)
             img = cv2.resize(img, self.dim[0:2])
             img = img - avg_colors
             X[i,] = img
 
             # Store class
-            y[i,] = np.load(LABELS_DIR + list_labels_temp[i])
+            y[i,] = np.load(label_path)
             
         return X, y

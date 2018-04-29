@@ -11,11 +11,17 @@ import numpy as np
 import cv2
 from collections import defaultdict
 from tqdm import tqdm
+import random
+import shutil
 
 BASE_DIR = "M:/Documents/Courses/CSE586/finalProject/CV2_final_project"
+PROCESSED_DIR = os.path.join(BASE_DIR, "data/preprocessed_2")
+IMG_DIR = os.path.join(BASE_DIR, "data/VOCdevkit/VOC2012/JPEGImages")
 N_LEN = 1
 C_LEN = 20
 IMG_SIZE = (224, 224)
+VALIDATION_SIZE = 0.25
+TRAINING_SIZE = 1 - VALIDATION_SIZE
 
 XML_DIR = os.path.join(BASE_DIR, "data/VOCdevkit/VOC2012/Annotations")
 os.chdir(XML_DIR)
@@ -42,7 +48,14 @@ labels = {
     'horse': 20
 }
 
-num_images = len(os.listdir())
+# get a list of images and shuffle them
+print("getting images and randomizing split ...")
+images = os.listdir()
+num_images = len(images)
+random.shuffle(images)
+
+# get the necessary image data
+print("generating data ...")
 for count, fname in enumerate(tqdm(iterable=os.listdir(), total=num_images)):
     
     # get some info on the current file
@@ -76,7 +89,15 @@ for count, fname in enumerate(tqdm(iterable=os.listdir(), total=num_images)):
 
     target[0, 1:] = (np.exp(target[0, 1:])-1) / np.sum(np.exp(target[0, 1:])-1, axis=0)
     target[0, 0] = num_objects
-    np.save(os.path.join(BASE_DIR, "data/preprocessed_2/labels/{}.npy".format(count)), target)
+
+    # save to the proper training or validation directory
+    image_name = fname.split(".")[0] + ".jpg"
+    if count < num_images * TRAINING_SIZE:
+        np.save(os.path.join(PROCESSED_DIR, "train_labels/{}.npy".format(image_name)), target)
+        shutil.copyfile(os.path.join(IMG_DIR, image_name), os.path.join(PROCESSED_DIR, "train_images/{}".format(image_name)))
+    else:
+        np.save(os.path.join(PROCESSED_DIR, "validation_labels/{}.npy".format(image_name)), target)
+        shutil.copyfile(os.path.join(IMG_DIR, image_name), os.path.join(PROCESSED_DIR, "validation_images/{}".format(image_name)))
 
 # Gathering images
 # IMG_DIR = os.path.join(BASE_DIR, "data/VOCdevkit/VOC2012/JPEGImages")

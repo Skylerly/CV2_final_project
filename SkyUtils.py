@@ -10,6 +10,7 @@ from keras import backend as K
 import keras
 from keras import losses, metrics
 import os
+import tensorflow as tf
 
 def makePredictions(model, image_dir, label_dir, indices):
     # constants
@@ -39,6 +40,13 @@ def makePredictions(model, image_dir, label_dir, indices):
         print("---------------------- Image: {} ({}) ----------------------".format(idx, images[idx]))
         print("Target: {}".format(target))
         print("Prediction: {}".format(pred))
+        # pred = np.expand_dims(pred, axis=0)
+        # target = np.expand_dims(target, axis=0)
+        # print("MSE loss: {}".format(np.mean((target[:, 0] - pred[:, 0])**2)))
+        # print("Categorical loss: {}".format(losses.categorical_crossentropy(target[:, 1:], pred[:, 1:])))
+        # print("Total Loss: {}".format(custom_loss_2(target, pred)))
+        # print("Custom MSE accuracy: {}".format(custom_accuracy_num(target, pred)))
+        # print("Custom cat accuracy: {}".format(custom_accuracy_cat(target, pred)))
 
 def drawRectsFromPred(predictions, img):
     S = 7
@@ -56,23 +64,35 @@ def drawRectsFromPred(predictions, img):
 def custom_loss_2(gt, pred):
 
     # loss from total number of objects
-    num_objects_loss_scalar = 5.0
+    num_objects_loss_scalar = 2.0
     num_objects_loss = losses.mean_squared_error(gt[:, 0], pred[:, 0])
 
     # figure out how to predict loss for the categorical part
     # do I need to convert it to binary and one class
     # to use categorical cross entropy?
-    categorical_loss_scalar = 1.0
+    categorical_loss_scalar = 10.0
     categorical_loss = losses.categorical_crossentropy(gt[:, 1:], pred[:, 1:])
 
-    # total_loss = num_objects_loss_scalar * num_objects_loss + \
-    #     categorical_loss_scalar  * categorical_loss
-    total_loss = num_objects_loss
+    total_loss = num_objects_loss_scalar * num_objects_loss + \
+        categorical_loss_scalar  * categorical_loss
+    # total_loss = num_objects_loss
 
     return total_loss
 
 def custom_accuracy_cat(gt, pred):
-    return metrics.categorical_accuracy(gt[:, 1:], pred[:, 1:])
+    target = gt[:, 1:] / K.sum(K.square(gt[:, 1:]), axis=-1)
+    predicted = pred[:, 1:] / K.sum(K.square(pred[:, 1:]), axis=-1)
+    multiplied = keras.layers.multiply([target, predicted])
+    return K.sum(K.flatten(multiplied))
+
+def custom_accuracy_top_5(gt, pred):
+    return metrics.top_k_categorical_accuracy(gt[:, 1:], pred[:, 1:], k=5)
+
+def custom_accuracy_top_1(gt, pred):
+    return metrics.top_k_categorical_accuracy(gt[:, 1:], pred[:, 1:], k=1)
+
+def custom_accuracy_top_10(gt, pred):
+    return metrics.top_k_categorical_accuracy(gt[:, 1:], pred[:, 1:], k=10)
 
 def custom_accuracy_num(gt, pred):
     return metrics.mean_squared_error(gt[:, 0], pred[:, 0])
@@ -80,7 +100,6 @@ def custom_accuracy_num(gt, pred):
 def customloss(gt, pred):
     """ Custom loss function to apply categorical cross entropy to the classification
     results and L2 loss to confidence and box coordinates"""
-    #assert gt.shape == pred.shape
     # gt stands for ground truth
     # pred is the predicted values
 
