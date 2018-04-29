@@ -10,6 +10,7 @@ NOTE: Original code taken from https://stanford.edu/~shervine/blog/keras-how-to-
 import numpy as np
 import keras
 import cv2
+from random import randint
 
 class DataGenerator(keras.utils.Sequence):
     'Generates data for Keras'
@@ -48,6 +49,15 @@ class DataGenerator(keras.utils.Sequence):
         if self.shuffle == True:
             np.random.shuffle(self.indexes)
 
+    def _flip(self,img):
+        return np.flip(img,1)
+    def _rotate(self,img):
+        theta = randint(-30,30)
+        rows,cols = img.shape[:2]
+        M = cv2.getRotationMatrix2D((cols/2,rows/2),theta,1)
+        out = cv2.warpAffine(img,M,(cols,rows))
+        return out
+        
     def __data_generation(self, list_IDs_temp,list_labels_temp):
         'Generates data containing batch_size samples' # X : (n_samples, *dim, n_channels)
         # Initialization
@@ -61,6 +71,12 @@ class DataGenerator(keras.utils.Sequence):
         for i, ID in enumerate(list_IDs_temp):
             # Store sample
             img = cv2.imread(IMG_DIR + ID)
+            # 50% chance to flip horizontally
+            if randint(0,1):
+                img = self._flip(img)
+            #rotate +/- 30 degrees
+            img = self._rotate(img)
+            
             img = cv2.resize(img, (224,224))
             img = img - avg_colors
             #X[i,] = np.load('D:/VOC_individual_np/images/' + ID)

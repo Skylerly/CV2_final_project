@@ -9,9 +9,9 @@ import xml.etree.ElementTree as etree
 import os
 import numpy as np
 import cv2
+from collections import defaultdict
 
-
-XML_DIR = 'D:/VOCtrainval_11-May-2012/VOCdevkit/VOC2012/Annotations'
+XML_DIR = 'C:/VOCtrainval_11-May-2012/VOCdevkit/VOC2012/Annotations'
 os.chdir(XML_DIR)
 labels = {
         'bird': 1, 
@@ -34,6 +34,9 @@ labels = {
         'diningtable': 18, 
         'aeroplane': 19, 
         'horse': 20}
+N_LEN = 1
+C_LEN = 20
+IMG_SIZE = (224, 224)
 
 num_images = len(os.listdir())
 training_y = np.empty([num_images, 7, 7, 25])
@@ -86,25 +89,57 @@ for count, fname in enumerate(os.listdir()):
     np.save('D:/VOC_individual_np/labels/{}.npy'.format(count), target)
         
 
+## TOM UPDATE
+for count, fname in enumerate(os.listdir()):
+    tree = etree.parse(fname)
+    root = tree.getroot()
+
+    # initialize the target to be predicted
+    target = np.zeros((1, N_LEN + C_LEN))
+
+    # find all objects in the image
+    object_count = defaultdict(lambda: 0)
+    num_objects = 0
+    for obj in root.findall('object'):
+        name = obj.find('name').text
+        object_count[name] += 1
+        num_objects += 1
+
+    # find most common object
+    max_count = -1
+    max_obj = ""
+    for key in labels.keys():
+        obj_count = object_count[key]
+        if obj_count > 0:
+            max_count = obj_count
+            max_obj = key
         
-        
-        
+            # add the obj to the target for prediction
+            # note that this will give multiple predicted targets
+            # we take the max and testing time
+            target[0, labels[key] + N_LEN - 1] += 1
+
+    target[0, 1:] = (np.exp(target[0, 1:])-1) / np.sum(np.exp(target[0, 1:])-1, axis=0)
+    target[0, 0] = num_objects
+    np.save('C:/VOC_individual_np/labels/{}.npy'.format(fname[:-4]), target)
+    if count % 1000 == 0:
+        print(count)
         
 # Gathering images
 IMG_DIR = 'D:/VOCtrainval_11-May-2012/VOCdevkit/VOC2012/JPEGImages'
 num_images = len(os.listdir())
 #train_x = np.empty([int(num_images/4), 224, 224, 3])
-os.chdir(IMG_DIR)
-avg_colors = (124.59085262283071, 124.91715538568295, 124.90344722141644) # precomputed on the training set in bgr order
-count = 0
-for i, img in enumerate(os.listdir()):
-    img = cv2.imread(img)
-    img = cv2.resize(img, (224,224))
-    img = img - avg_colors
-    np.save('D:/VOC_individual_np/images/{}.npy'.format(i), img)
-
-    
-    
+#os.chdir(IMG_DIR)
+#avg_colors = (124.59085262283071, 124.91715538568295, 124.90344722141644) # precomputed on the training set in bgr order
+#count = 0
+#for i, img in enumerate(os.listdir()):
+#    img = cv2.imread(img)
+#    img = cv2.resize(img, (224,224))
+#    img = img - avg_colors
+#    np.save('C:/VOC_individual_np/images/{}.npy'.format(i), img)
+#
+#    
+#    
     
     
     # DISPLAY PURPOSES
@@ -127,21 +162,6 @@ for rect in rects:
     x, y, w, h = [int(x) for x in rect]
     cv2.rectangle(output, (x,y),(x+w,y+h), (0,0,0), 1)
 cv2.imshow('super', cv2.resize(np.uint8(output), (500,500))); cv2.waitKey()
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
     
     
     

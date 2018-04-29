@@ -21,11 +21,13 @@ from keras.models import Sequential, Model
 from keras import optimizers
 from keras.utils import np_utils
 
-image_IDs = os.listdir('D:/VOC_individual_np/images')
-image_IDs = os.listdir('D:/VOCtrainval_11-May-2012/VOCdevkit/VOC2012/JPEGImages/')
-labels = os.listdir('D:/VOC_individual_np/labels')
+
+image_IDs = os.listdir('C:/VOCtrainval_11-May-2012/VOCdevkit/VOC2012/JPEGImages/')[:15000]
+labels = os.listdir('C:/VOC_individual_np/labels')[:15000]
+val_IDs = os.listdir('C:/VOCtrainval_11-May-2012/VOCdevkit/VOC2012/JPEGImages/')[15000:]
+val_labels = os.listdir('C:/VOC_individual_np/labels')[15000:]
 conv_base = VGG16(weights='imagenet',include_top=False, input_shape=(224, 224, 3))
-for layer in conv_base.layers:
+for layer in conv_base.layers[:14]:
     layer.trainable = False
     
 # BB regression
@@ -33,8 +35,10 @@ input = Input(shape=(224,224,3))
 conv_base = conv_base(input)
 #conv_base = VGG16(weights='imagenet',include_top=False, input_shape=(224, 224, 3))(input)
 x = Flatten()(conv_base)
-x = Dense(256, activation='relu')(x)
-out = Dense(21)(x)
+x = Dense(512, activation='relu')(x)
+probs = Dense(20, activation='softmax')(x)
+num_objs = Dense(1)(x)
+out = concatenate([num_objs,probs])
 
 model = Model(inputs=input, outputs=out)
 
@@ -54,22 +58,69 @@ adam = optimizers.adam(lr=0.0001, beta_1=0.9, beta_2=0.999)
 model.compile(loss=SkyUtils.custom_loss_2, optimizer=adam, metrics=[SkyUtils.custom_accuracy_1, SkyUtils.custom_accuracy_2])
 
 training_generator = dataGenerator.DataGenerator(image_IDs, labels)
+validation_generator = dataGenerator.DataGenerator(val_IDs, val_labels)
 
-
-epochs = 1
-acc = []
+model.summary()
+epochs = 25
+custom_acc1 = []
+custom_acc2 = []
 loss = []
+val_custom_acc1 = []
+val_custom_acc2 = []
+val_loss = []
 for i in range(epochs):
     history = model.fit_generator(generator = training_generator, use_multiprocessing = False, workers = 16)
-    acc.append(history.history['acc'])
+    val_history = model.evaluate_generator(generator = validation_generator, use_multiprocessing=False, workers = 16)
+    custom_acc1.append(history.history['custom_accuracy_1'])
+    custom_acc2.append(history.history['custom_accuracy_2'])
     loss.append(history.history['loss'])
-    model.save('C:/Users/ander/OneDrive/Desktop/DL/CV2_final_project/model_saves/first_model_{}.h5'.format(i))
-    model.save_weights('C:/Users/ander/OneDrive/Desktop/DL/CV2_final_project/model_saves/first_model_weights_{}.h5'.format(i))
-    
+    val_custom_acc1.append(val_history[1])
+    val_custom_acc2.append(val_history[2])
+    val_loss.append(val_history[0])
+    # plot
+    x = [x for x in range(len(loss))]
+    pylab.plot(x,loss,'r-',label='loss')
+    pylab.plot(x,val_loss,'b-',label='validation loss')
+    pylab.legend(loc='upper left')
+    pylab.show()
+model.save('C:/Users/ander/OneDrive/Desktop/DL/CV2_final_project/model_saves/first_model_{}.h5'.format(i))
+model.save_weights('C:/Users/ander/OneDrive/Desktop/DL/CV2_final_project/model_saves/first_model_weights_{}.h5'.format(i))
+
+print('making all layers trainable...')
+for layer in model.layers[1].layers:
+    layer.trainable = True
+model.summary()
+for i in range(epochs):
+    history = model.fit_generator(generator = training_generator, use_multiprocessing = False, workers = 16)
+    val_history = model.evaluate_generator(generator = validation_generator, use_multiprocessing=False, workers = 16)
+    custom_acc1.append(history.history['custom_accuracy_1'])
+    custom_acc2.append(history.history['custom_accuracy_2'])
+    loss.append(history.history['loss'])
+    val_custom_acc1.append(val_history[1])
+    val_custom_acc2.append(val_history[2])
+    val_loss.append(val_history[0])
+model.save('C:/Users/ander/OneDrive/Desktop/DL/CV2_final_project/model_saves/first_model_{}.h5'.format(i))
+model.save_weights('C:/Users/ander/OneDrive/Desktop/DL/CV2_final_project/model_saves/first_model_weights_{}.h5'.format(i))
+
+from matplotlib import pyplot as plt
+import pylab
+x = [x for x in range(len(loss))]
+pylab.plot(x,loss,'r-',label='loss')
+pylab.plot(x,val_loss,'b-',label='validation loss')
+pylab.legend(loc='upper left')
+pylab.show()
+
+plt.plot(x,loss,'r-',x,val_loss,'b-',label='loss')
+plt.plot(x,custom_acc1,x,val_custom_acc1,label='custom_acc1')
+plt.plot(x,custom_acc2,x,val_custom_acc2,label='custom_acc2')
+plt.legend()
+IMG_DIR = 'C:/VOCtrainval_11-May-2012/VOCdevkit/VOC2012/JPEGImages/'
+LABEL_DIR = 'C:/VOC_individual_np/labels'
+indices = [x for x in range(17000,17010)]
+SkyUtils.makePredictions2(model,IMG_DIR,LABEL_DIR,indices)
 img = np.load('D:/VOC_individual_np/images/1.npy')
 gt = np.load('D:/VOC_individual_np/labels/1.npy')
-cv2.imshow('img',img);cv2.waitKey()
-
+#cv2.imshow('img',img);cv2.waitKey()
 prediction = model.predict(np.expand_dims(img, axis=0))
 canvas = cv2.imread('D:/VOCtrainval_11-May-2012/VOCdevkit/VOC2012/JPEGImages/2007_000032.jpg')
 canvas = cv2.resize(canvas, (224,224))
