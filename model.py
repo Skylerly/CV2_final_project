@@ -16,23 +16,31 @@ from keras import optimizers
 from keras.utils import np_utils
 import pylab
 
-image_IDs = os.listdir('C:/VOCtrainval_11-May-2012/VOCdevkit/VOC2012/JPEGImages/')[:15000]
-labels = os.listdir('C:/VOC_individual_np/labels')[:15000]
-val_IDs = os.listdir('C:/VOCtrainval_11-May-2012/VOCdevkit/VOC2012/JPEGImages/')[15000:]
-val_labels = os.listdir('C:/VOC_individual_np/labels')[15000:]
-conv_base = VGG16(weights='imagenet',include_top=False, input_shape=(224, 224, 3))
-for layer in conv_base.layers[:14]:
-    layer.trainable = False
+np.random.seed(seed=8795)
+image_IDs = os.listdir('C:/VOCtrainval_11-May-2012/VOCdevkit/VOC2012/JPEGImages/')
+np.random.shuffle(image_IDs)
+np.random.seed(seed=8795)
+labels = os.listdir('C:/VOC_individual_np/labels')
+np.random.shuffle(labels)
+val_IDs = image_IDs[15000:]
+val_labels = labels[15000:]
+image_IDs = image_IDs[:15000]
+labels = labels[:15000]
     
-# BB regression
+
 input = Input(shape=(224,224,3))
-conv_base = conv_base(input)
-#conv_base = VGG16(weights='imagenet',include_top=False, input_shape=(224, 224, 3))(input)
-x = Flatten()(conv_base)
+conv_base = VGG16(weights='imagenet',include_top=False, input_shape=(224, 224, 3))
+for layer in conv_base.layers:
+    layer.trainable = False
+base = conv_base(input)
+#c1 = Convolution2D(64,kernel_size=(3,3), activation='relu')(input)
+#c2 = Convolution2D(64,kernel_size=(3,3), activation='relu')(c1)
+x = Flatten()(base)
 x = Dense(512, activation='relu')(x)
+x = Dropout(0.5)(x)
 probs = Dense(20, activation='softmax')(x)
 num_objs = Dense(1)(x)
-out = concatenate([num_objs,probs])
+out = concatenate([num_objs,probs],axis=1)
 
 model = Model(inputs=input, outputs=out)
 
@@ -46,7 +54,7 @@ model.compile(loss=SkyUtils.custom_loss_2, optimizer=adam, metrics=[
         SkyUtils.custom_accuracy_top_10
     ])
 
-training_generator = dataGenerator.DataGenerator(image_IDs, labels)
+training_generator = dataGenerator.DataGenerator(image_IDs, labels,batch_size=64)
 validation_generator = dataGenerator.DataGenerator(val_IDs, val_labels)
 
 model.summary()
@@ -79,7 +87,7 @@ for i in range(epochs):
     val_custom_acc_top_10.append(val_history[4])
     val_loss.append(val_history[0])
     # plot
-    x = [x for x in range(len(loss))]
+    x = [x for x in range(1,len(loss)+1)]
     pylab.plot(x,loss,'r-',label='loss')
     pylab.plot(x,val_loss,'b-',label='validation loss')
     pylab.legend(loc='upper left')
