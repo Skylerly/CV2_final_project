@@ -1,9 +1,5 @@
 # -*- coding: utf-8 -*-
 """
-Created on Sat Apr  7 10:52:32 2018
-
-@author: ander
-
 NOTE: Original code taken from https://stanford.edu/~shervine/blog/keras-how-to-generate-data-on-the-fly.html and modified
 """
 
@@ -14,15 +10,13 @@ from random import randint
 
 class DataGenerator(keras.utils.Sequence):
     'Generates data for Keras'
-    def __init__(self, list_IDs, labels, batch_size=32, dim=(224,224,3),
-                 n_classes=10, shuffle=True, ):
+    def __init__(self, list_IDs, labels, batch_size=32, dim=(224,224,3), shuffle=True, ):
         'Initialization'
         self.dim = dim
         self.batch_size = batch_size
         self.labels = labels
         self.list_IDs = list_IDs
         
-        self.n_classes = n_classes
         self.shuffle = shuffle
         self.on_epoch_end()
 
@@ -75,7 +69,7 @@ class DataGenerator(keras.utils.Sequence):
             if randint(0,1):
                 img = self._flip(img)
             #rotate +/- 30 degrees
-            img = self._rotate(img)
+            #img = self._rotate(img)
             
             img = cv2.resize(img, (224,224))
             img = img - avg_colors

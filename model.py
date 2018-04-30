@@ -1,10 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Thu Apr  5 18:32:04 2018
-
-@author: ander
-"""
-
 import numpy as np
 import cv2
 import os
@@ -20,7 +14,7 @@ from keras.layers import Input, Convolution2D, MaxPooling2D, Dense, Dropout, Fla
 from keras.models import Sequential, Model
 from keras import optimizers
 from keras.utils import np_utils
-
+import pylab
 
 image_IDs = os.listdir('C:/VOCtrainval_11-May-2012/VOCdevkit/VOC2012/JPEGImages/')[:15000]
 labels = os.listdir('C:/VOC_individual_np/labels')[:15000]
@@ -42,40 +36,47 @@ out = concatenate([num_objs,probs])
 
 model = Model(inputs=input, outputs=out)
 
-#
-#model = Sequential()
-#model.add(conv_base)
-##model.add(Convolution2D(25, (1,1)))
-#model.add(Flatten())
-#model.add(Dense(4096, activation='sigmoid'))
-#model.add(Dropout(0.5))
-#model.add(Dense(7 * 7 * 25))
-#model.add(Reshape((7,7,25)))
-
 
 
 adam = optimizers.adam(lr=0.0001, beta_1=0.9, beta_2=0.999)
-model.compile(loss=SkyUtils.custom_loss_2, optimizer=adam, metrics=[SkyUtils.custom_accuracy_1, SkyUtils.custom_accuracy_2])
+model.compile(loss=SkyUtils.custom_loss_2, optimizer=adam, metrics=[
+        SkyUtils.custom_accuracy_num,
+        SkyUtils.custom_accuracy_top_1,
+        SkyUtils.custom_accuracy_top_5,
+        SkyUtils.custom_accuracy_top_10
+    ])
 
 training_generator = dataGenerator.DataGenerator(image_IDs, labels)
 validation_generator = dataGenerator.DataGenerator(val_IDs, val_labels)
 
 model.summary()
 epochs = 25
-custom_acc1 = []
-custom_acc2 = []
 loss = []
-val_custom_acc1 = []
-val_custom_acc2 = []
+custom_acc_num = []
+custom_acc_top_1 = []
+custom_acc_top_5 = []
+custom_acc_top_10 = []
+
+val_loss = []
+val_custom_acc_num = []
+val_custom_acc_top_1 = []
+val_custom_acc_top_5 = []
+val_custom_acc_top_10 = []
 val_loss = []
 for i in range(epochs):
     history = model.fit_generator(generator = training_generator, use_multiprocessing = False, workers = 16)
     val_history = model.evaluate_generator(generator = validation_generator, use_multiprocessing=False, workers = 16)
-    custom_acc1.append(history.history['custom_accuracy_1'])
-    custom_acc2.append(history.history['custom_accuracy_2'])
+    
+    custom_acc_num.append(history.history['custom_accuracy_num'])
+    custom_acc_top_1.append(history.history['custom_accuracy_top_1'])
+    custom_acc_top_5.append(history.history['custom_accuracy_top_5'])
+    custom_acc_top_10.append(history.history['custom_accuracy_top_10'])
     loss.append(history.history['loss'])
-    val_custom_acc1.append(val_history[1])
-    val_custom_acc2.append(val_history[2])
+    
+    val_custom_acc_num.append(val_history[1])
+    val_custom_acc_top_1.append(val_history[2])
+    val_custom_acc_top_5.append(val_history[3])
+    val_custom_acc_top_10.append(val_history[4])
     val_loss.append(val_history[0])
     # plot
     x = [x for x in range(len(loss))]

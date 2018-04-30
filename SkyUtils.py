@@ -1,9 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Sat Apr  7 23:37:05 2018
-
-@author: ander
-"""
 import cv2
 import numpy as np
 from keras import backend as K
@@ -113,6 +108,24 @@ def makePredictions2(model, image_dir, label_dir, indices):
 
 
 
+def custom_accuracy_cat(gt, pred):
+    target = gt[:, 1:] / K.sum(K.square(gt[:, 1:]), axis=-1)
+    predicted = pred[:, 1:] / K.sum(K.square(pred[:, 1:]), axis=-1)
+    multiplied = keras.layers.multiply([target, predicted])
+    return K.sum(K.flatten(multiplied))
+
+def custom_accuracy_top_5(gt, pred):
+    return metrics.top_k_categorical_accuracy(gt[:, 1:], pred[:, 1:], k=5)
+
+def custom_accuracy_top_1(gt, pred):
+    return metrics.top_k_categorical_accuracy(gt[:, 1:], pred[:, 1:], k=1)
+
+def custom_accuracy_top_10(gt, pred):
+    return metrics.top_k_categorical_accuracy(gt[:, 1:], pred[:, 1:], k=10)
+
+def custom_accuracy_num(gt, pred):
+    return metrics.mean_squared_error(gt[:, 0], pred[:, 0])
+
 def drawRectsFromPred(predictions, img):
     for i in range(7):
         for j in range(7):
@@ -147,13 +160,13 @@ def overlayPredsByColor(predictions,img):
 def custom_loss_2(gt, pred):
 
     # loss from total number of objects
-    num_objects_loss_scalar = 5.0
+    num_objects_loss_scalar = 2.0
     num_objects_loss = losses.mean_squared_error(gt[:, 0], pred[:, 0])
 
     # figure out how to predict loss for the categorical part
     # do I need to convert it to binary and one class
     # to use categorical cross entropy?
-    categorical_loss_scalar = 5.0
+    categorical_loss_scalar = 10.0
     categorical_loss = losses.categorical_crossentropy(gt[:, 1:], pred[:, 1:])
 
     total_loss = num_objects_loss_scalar * num_objects_loss + categorical_loss_scalar  * categorical_loss
