@@ -29,7 +29,7 @@ TRAIN_IMG_DIR = os.path.join(PREPROCESSED_DIR, "train_images")
 TRAIN_LABEL_DIR = os.path.join(PREPROCESSED_DIR, "train_labels")
 VALIDATION_IMG_DIR = os.path.join(PREPROCESSED_DIR, "validation_images")
 VALIDATION_LABEL_DIR = os.path.join(PREPROCESSED_DIR, "validation_labels")
-prediction_indices = [10, 34, 73, 24, 1003, 51, 85, 92, 90, 2041]
+prediction_indices = [10, 34, 73, 24]  #, 1003, 51, 85, 92, 90, 2041]
 N_LEN = 1
 C_LEN = 20
 IMG_SIZE = (224, 224, 3)
@@ -93,7 +93,7 @@ validation_generator = dataGenerator_new.DataGenerator_new(validation_image_IDs,
 SkyUtils.makePredictions(model=model, image_dir=VALIDATION_IMG_DIR, label_dir=VALIDATION_LABEL_DIR, indices=prediction_indices)
 
 print("training ...")
-epochs = 10
+epochs = 3
 acc = []
 loss = []
 for i in range(epochs):
@@ -102,7 +102,9 @@ for i in range(epochs):
         use_multiprocessing=MULTIPROCESSING, 
         workers=PARALLEL
     )
-    model.evaluate_generator(validation_generator)
+    print(history)
+    scores = model.evaluate_generator(validation_generator)
+    print(scores)
     # acc.append(history.history['acc'])
     # loss.append(history.history['loss'])
     # print("epoch {} / {}, loss: {}".format(i, epochs, loss[-1]))
