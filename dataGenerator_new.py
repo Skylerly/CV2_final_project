@@ -11,11 +11,12 @@ import numpy as np
 import keras
 import cv2
 import os
+import random
 
 class DataGenerator_new(keras.utils.Sequence):
     'Generates data for Keras'
     def __init__(self, list_IDs, labels, batch_size=4, dim=(224,224,3),
-                 n_classes=20, shuffle=True, img_dir="", label_dir=""):
+                 n_classes=20, shuffle=True, img_dir="", label_dir="", train=False):
         'Initialization'
         self.dim = dim
         self.batch_size = batch_size
@@ -23,7 +24,7 @@ class DataGenerator_new(keras.utils.Sequence):
         self.list_IDs = list_IDs
         self.img_dir = img_dir
         self.label_dir = label_dir
-        
+        self.train = train
         self.n_classes = n_classes
         self.shuffle = shuffle
         self.on_epoch_end()
@@ -51,6 +52,26 @@ class DataGenerator_new(keras.utils.Sequence):
         if self.shuffle == True:
             np.random.shuffle(self.indexes)
 
+    # flip an image for training
+    def _flip(self,img):
+        return np.flip(img, axis=1)
+
+    # rotate image for training
+    def _rotate(self,img):
+        theta = random.randint(-30,30)
+        rows,cols = img.shape[:2]
+        M = cv2.getRotationMatrix2D((cols/2,rows/2),theta,1)
+        out = cv2.warpAffine(img,M,(cols,rows))
+        return out
+
+    # shift an image vertically or horizontally
+    def _shift(self, img):
+        hshift = random.randint(-20, 20)
+        vshift = random.randint(-20, 20)
+        img = np.roll(img, hshift, axis=1)
+        img = np.roll(img, vshift, axis=0)
+        return img
+
     def __data_generation(self, list_IDs_temp, list_labels_temp):
         N_LEN = 1
         C_LEN = 20
@@ -68,7 +89,20 @@ class DataGenerator_new(keras.utils.Sequence):
             image_path = os.path.join(IMG_DIR, ID)
             label_path = os.path.join(LABEL_DIR, list_labels_temp[i])
 
+            # load image
             img = cv2.imread(image_path)
+            
+            # apply augmentation
+            # 50% chance to flip horizontally
+            if self.train and random.randint(0,1):
+                img = self._flip(img)
+            #rotate +/- 30 degrees
+            if self.train and random.randint(0, 1):
+                img = self._rotate(img)
+            if self.train and random.randint(0, 1):
+                img = self._shift(img)
+
+            # resize image and remove average colors
             img = cv2.resize(img, self.dim[0:2])
             img = img - avg_colors
             X[i,] = img
