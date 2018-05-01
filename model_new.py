@@ -65,9 +65,10 @@ input = Input(shape=IMG_SIZE)
 base = conv_base(input)
 # flatten for dense layers
 x = Flatten()(base)
+x = Dropout(rate=0.4)(x)
 # apply 4096 hidden layer
 x = Dense(HIDDEN_SIZE, activation='relu')(x)
-x = Dropout(rate=0.2)(x)
+x = Dropout(rate=0.4)(x)
 # get confidence scores and reshape
 num_images = Dense(N_LEN)(x)
 class_probs = Dense(C_LEN, activation="softmax")(x)
@@ -77,7 +78,7 @@ print(out)
 print("creating model ...")
 model = Model(inputs=input, outputs=out)
 # compile model or whatever
-adam = optimizers.adam(lr=0.0001, beta_1=0.9, beta_2=0.999)
+adam = optimizers.adam(lr=0.000001, beta_1=0.9, beta_2=0.999)
 model.compile(
     loss=SkyUtils.custom_loss_2,
     optimizer=adam,
@@ -109,7 +110,7 @@ learning_rate_scheduler = keras.callbacks.ReduceLROnPlateau(
 SkyUtils.makePredictions2(model=model, image_dir=VALIDATION_IMG_DIR, label_dir=VALIDATION_LABEL_DIR, indices=prediction_indices)
 
 print("training ...")
-epochs = 20
+epochs = 10
 train_total_loss = []
 train_num_images_loss = []
 train_top_1_acc_loss = []
@@ -124,28 +125,29 @@ for i in range(epochs):
     history = model.fit_generator(
         generator=training_generator,
         use_multiprocessing=MULTIPROCESSING,
-        workers=PARALLEL
+        workers=PARALLEL,
+        verbose=1,
+        validation_data=validation_generator,
+        epochs=1
     )
-    print(history.history)
-    scores = model.evaluate_generator(validation_generator)
 
+    # get the metrics
     train_total_loss.append(history.history['loss'])
     train_num_images_loss.append(history.history['custom_accuracy_num'])
     train_top_1_acc_loss.append(history.history['custom_accuracy_top_1'])
     train_top_5_acc_loss.append(history.history['custom_accuracy_top_5'])
     train_top_10_acc_loss.append(history.history['custom_accuracy_top_10'])
-    
-    val_total_loss.append(scores[0])
-    val_num_images_loss.append(scores[1])
-    val_top_1_acc_loss.append(scores[2])
-    val_top_5_acc_loss.append(scores[3])
-    val_top_10_acc_loss.append(scores[4])
+    val_total_loss.append(history.history['val_loss'])
+    val_num_images_loss.append(history.history['val_custom_accuracy_num'])
+    val_top_1_acc_loss.append(history.history['val_custom_accuracy_top_1'])
+    val_top_5_acc_loss.append(history.history['val_custom_accuracy_top_5'])
+    val_top_10_acc_loss.append(history.history['val_custom_accuracy_top_10'])
 
     print("Validation: ")
-    print("total loss: {}".format(scores[0]))
-    print("top 1 accuracy: {}".format(scores[2]))
-    print("top 5 accuracy: {}".format(scores[3]))
-    print("top 10 accuracy: {}".format(scores[4]))
+    print("total loss: {}".format(val_total_loss[i]))
+    print("top 1 accuracy: {}".format(val_top_1_acc_loss[i]))
+    print("top 5 accuracy: {}".format(val_top_5_acc_loss[i]))
+    print("top 10 accuracy: {}".format(val_top_10_acc_loss[i]))
 
     model.save(os.path.join(BASE_DIR, "models/big_model_{}.h5".format(i)))
     model.save_weights(os.path.join(BASE_DIR, "models/big_model_weights_{}.h5".format(i)))

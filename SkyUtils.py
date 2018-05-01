@@ -112,8 +112,8 @@ def makePredictions2(model, image_dir, label_dir, indices):
         print("           | Target   | Predicted")
         print("Num Objects|   {}    |   {}     ".format(target[0],round(pred[0])))
         for i,val in enumerate(pred[1:]):
-            if target[i+1] > 0:
-                print(VOC_labels_flipped[i+1] + " " * (11 - len(VOC_labels_flipped[i+1])) + "|   {:.2f}   |   {:.2f}     ".format(target[i+1],round(pred[i+1],2)) )
+            # if target[i+1] > 0:
+            print(VOC_labels_flipped[i+1] + " " * (11 - len(VOC_labels_flipped[i+1])) + "|   {:.2f}   |   {:.2f}     ".format(target[i+1],round(pred[i+1],2)) )
 
 
 
